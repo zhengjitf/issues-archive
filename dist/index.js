@@ -237,7 +237,7 @@ const persist = (token, owner, repo) => __awaiter(void 0, void 0, void 0, functi
     const [err] = yield utils_1.tryCatch(gitService.getRef());
     if (err) {
         yield gitService.createOrUpdateFileContents({
-            path: '.gitkeep',
+            path: 'README.md',
             message: 'chore: init',
             content: ''
         });
@@ -249,6 +249,10 @@ const persist = (token, owner, repo) => __awaiter(void 0, void 0, void 0, functi
     const { tree } = treeData;
     const treeMap = tree.reduce((map, item) => {
         var _a;
+        // 忽略 .开头的目录
+        if (item.path[0] === '.') {
+            return map;
+        }
         if (item.type === 'tree') {
             // 文件夹
             map[item.path] = {
@@ -258,11 +262,11 @@ const persist = (token, owner, repo) => __awaiter(void 0, void 0, void 0, functi
         }
         else if (item.type === 'blob') {
             // 文件
-            const [dir, name] = ((_a = item.path) === null || _a === void 0 ? void 0 : _a.split('/')) || [];
-            // TIPS: 忽略根路径下的文件
-            if (name) {
+            const [dir, filename] = ((_a = item.path) === null || _a === void 0 ? void 0 : _a.split('/')) || [];
+            // TIPS: 忽略根路径下的文件及非 .md 后缀的文件
+            if (filename && filename.match(/^(.+)\.md$/)) {
                 map[dir].files.push({
-                    name,
+                    name: filename.match(/^(.+)\.md$/)[1],
                     sha: item.sha
                 });
             }
@@ -281,7 +285,7 @@ const persist = (token, owner, repo) => __awaiter(void 0, void 0, void 0, functi
             // TIPS: 删除目录下的所有文件，文件夹会被一起删除
             for (const { name } of files) {
                 removeds.push({
-                    path: `${dir}/${name}`,
+                    path: `${dir}/${name}.md`,
                     mode: '100644',
                     sha: null,
                     type: 'blob'
@@ -299,7 +303,7 @@ const persist = (token, owner, repo) => __awaiter(void 0, void 0, void 0, functi
             // 要删除的文件
             if (!comment) {
                 removeds.push({
-                    path: `${dir}/${file.name}`,
+                    path: `${dir}/${file.name}.md`,
                     mode: '100644',
                     sha: null,
                     type: 'blob'
@@ -311,7 +315,7 @@ const persist = (token, owner, repo) => __awaiter(void 0, void 0, void 0, functi
             // 要更新的文件
             if (blob.sha !== file.sha) {
                 updates.push({
-                    path: `${dir}/${file.name}`,
+                    path: `${dir}/${file.name}.md`,
                     mode: '100644',
                     sha: blob.sha,
                     type: 'blob'
@@ -322,20 +326,20 @@ const persist = (token, owner, repo) => __awaiter(void 0, void 0, void 0, functi
         for (const [title, content] of Object.entries(commentsMap)) {
             const { data: blob } = yield gitService.createBlob(content);
             creates.push({
-                path: `${dir}/${title}`,
+                path: `${dir}/${title}.md`,
                 mode: '100644',
                 sha: blob.sha,
                 type: 'blob'
             });
         }
     }
-    // 要新增的文件夹和文件
+    // 要新增的文件
     for (const [issueTitle, comments] of Object.entries(issuesMap)) {
         // TIPS: 不用单独新建文件夹
         for (const { title, content } of comments) {
             const { data: blob } = yield gitService.createBlob(content);
             creates.push({
-                path: `${issueTitle}/${title}`,
+                path: `${issueTitle}/${title}.md`,
                 mode: '100644',
                 sha: blob.sha,
                 type: 'blob'
