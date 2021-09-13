@@ -1,5 +1,5 @@
 {
-  "name": "typescript-action",
+  "name": "issues-archive",
   "version": "0.0.0",
   "private": true,
   "description": "TypeScript template action",
@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/zhengjitf/issues-archive.git"
   },
   "keywords": [
     "actions",
@@ -35,7 +35,7 @@
     "@types/node": "^16.3.3",
     "@types/parse-link-header": "^1.0.0",
     "@typescript-eslint/parser": "^4.28.3",
-    "@vercel/ncc": "^0.29.0",
+    "@vercel/ncc": "^0.31.1",
     "eslint": "^7.31.0",
     "eslint-plugin-github": "^4.1.1",
     "eslint-plugin-jest": "^24.3.6",
