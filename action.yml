@@ -1,5 +1,5 @@
-name: 'issue persistence'
-description: 'Provide a description here'
+name: 'issues archive'
+description: 'issues archive'
 author: 'zhengjitf'
 inputs:
   token:
