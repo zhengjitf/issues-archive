@@ -221,7 +221,7 @@ export const persist = async (token: string, owner: string, repo: string) => {
 
   if (err) {
     await gitService.createOrUpdateFileContents({
-      path: '.gitkeep',
+      path: 'README.md',
       message: 'chore: init',
       content: ''
     })
@@ -233,6 +233,11 @@ export const persist = async (token: string, owner: string, repo: string) => {
   const {tree} = treeData
 
   const treeMap = tree.reduce((map, item) => {
+    // 忽略 .开头的目录
+    if (item.path![0] === '.') {
+      return map
+    }
+
     if (item.type === 'tree') {
       // 文件夹
       map[item.path!] = {
@@ -241,11 +246,11 @@ export const persist = async (token: string, owner: string, repo: string) => {
       }
     } else if (item.type === 'blob') {
       // 文件
-      const [dir, name] = item.path?.split('/') || []
-      // TIPS: 忽略根路径下的文件
-      if (name) {
+      const [dir, filename] = item.path?.split('/') || []
+      // TIPS: 忽略根路径下的文件及非 .md 后缀的文件
+      if (filename && filename.match(/^(.+)\.md$/)) {
         map[dir].files.push({
-          name,
+          name: filename.match(/^(.+)\.md$/)![1],
           sha: item.sha!
         })
       }
@@ -268,7 +273,7 @@ export const persist = async (token: string, owner: string, repo: string) => {
       // TIPS: 删除目录下的所有文件，文件夹会被一起删除
       for (const {name} of files) {
         removeds.push({
-          path: `${dir}/${name}`,
+          path: `${dir}/${name}.md`,
           mode: '100644',
           sha: null,
           type: 'blob'
@@ -291,7 +296,7 @@ export const persist = async (token: string, owner: string, repo: string) => {
       // 要删除的文件
       if (!comment) {
         removeds.push({
-          path: `${dir}/${file.name}`,
+          path: `${dir}/${file.name}.md`,
           mode: '100644',
           sha: null,
           type: 'blob'
@@ -306,7 +311,7 @@ export const persist = async (token: string, owner: string, repo: string) => {
       // 要更新的文件
       if (blob.sha !== file.sha) {
         updates.push({
-          path: `${dir}/${file.name}`,
+          path: `${dir}/${file.name}.md`,
           mode: '100644',
           sha: blob.sha,
           type: 'blob'
@@ -319,7 +324,7 @@ export const persist = async (token: string, owner: string, repo: string) => {
       const {data: blob} = await gitService.createBlob(content)
 
       creates.push({
-        path: `${dir}/${title}`,
+        path: `${dir}/${title}.md`,
         mode: '100644',
         sha: blob.sha,
         type: 'blob'
@@ -327,13 +332,13 @@ export const persist = async (token: string, owner: string, repo: string) => {
     }
   }
 
-  // 要新增的文件夹和文件
+  // 要新增的文件
   for (const [issueTitle, comments] of Object.entries(issuesMap)) {
     // TIPS: 不用单独新建文件夹
     for (const {title, content} of comments) {
       const {data: blob} = await gitService.createBlob(content)
       creates.push({
-        path: `${issueTitle}/${title}`,
+        path: `${issueTitle}/${title}.md`,
         mode: '100644',
         sha: blob.sha,
         type: 'blob'
