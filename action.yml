@@ -1,11 +1,13 @@
-name: 'Your name here'
+name: 'issue persistence'
 description: 'Provide a description here'
-author: 'Your name or organization here'
+author: 'zhengjitf'
 inputs:
-  milliseconds: # change this
+  token:
     required: true
-    description: 'input description here'
-    default: 'default value if applicable'
+    description: 'GITHUB TOKEN'
+  repository:
+    required: true
+    description: 'The owner and repository name'
 runs:
   using: 'node12'
   main: 'dist/index.js'

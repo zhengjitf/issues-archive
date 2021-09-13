@@ -1,19 +1,12 @@
 import * as core from '@actions/core'
-import {wait} from './wait'
+import {persist} from './service'
 
 async function run(): Promise<void> {
-  try {
-    const ms: string = core.getInput('milliseconds')
-    core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
+  const token: string = core.getInput('token')
+  const repository: string = core.getInput('repository')
+  const [owner, repo] = repository.split('/')
 
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
-
-    core.setOutput('time', new Date().toTimeString())
-  } catch (error) {
-    core.setFailed(error.message)
-  }
+  await persist(token, owner, repo)
 }
 
 run()
