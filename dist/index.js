@@ -170,7 +170,7 @@ const getIssues = (token, owner, repo) => __awaiter(void 0, void 0, void 0, func
             per_page: 10,
             page: index + 1
         });
-        const issues = yield Promise.all(list.map(({ number: issue_number, title, body: issueBody }, i) => __awaiter(void 0, void 0, void 0, function* () {
+        const issues = yield Promise.all(list.map(({ number: issue_number, title, body: issueBody }) => __awaiter(void 0, void 0, void 0, function* () {
             const { data } = yield octokit.rest.issues.listComments({
                 owner,
                 repo,
@@ -179,7 +179,7 @@ const getIssues = (token, owner, repo) => __awaiter(void 0, void 0, void 0, func
             const bodies = [issueBody]
                 .concat(data.map(({ body }) => body))
                 .filter(Boolean);
-            const comments = bodies.map(body => utils_1.parseBody(body, i));
+            const comments = bodies.map(utils_1.parseBody);
             return {
                 title,
                 comments
@@ -388,9 +388,10 @@ const parseBody = (body, index) => {
     const lines = body.split('\r\n');
     let title = String(index);
     for (const line of lines) {
-        const matched = line.match(/^#{1,5}\s(\S+)$/);
+        const matched = line.match(/^#{1,5}\s+(.+)$/);
         if (matched) {
-            title = matched[1];
+            // 去除特殊符号
+            title = matched[1].replace(/[^\u4e00-\u9fa5\w\-\s]/g, '');
             break;
         }
     }
