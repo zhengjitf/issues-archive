@@ -4,9 +4,10 @@ export const parseBody = (body: string, index: number): Comment => {
   const lines = body.split('\r\n')
   let title = String(index)
   for (const line of lines) {
-    const matched = line.match(/^#{1,5}\s(\S+)$/)
+    const matched = line.match(/^#{1,5}\s+(.+)$/)
     if (matched) {
-      title = matched[1]
+      // 去除特殊符号
+      title = matched[1].replace(/[^\u4e00-\u9fa5\w\-\s]/g, '')
       break
     }
   }

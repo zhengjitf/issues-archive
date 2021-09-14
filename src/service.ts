@@ -133,7 +133,7 @@ export const getIssues = async (
       })
 
       const issues: Issue[] = await Promise.all(
-        list.map(async ({number: issue_number, title, body: issueBody}, i) => {
+        list.map(async ({number: issue_number, title, body: issueBody}) => {
           const {data} = await octokit.rest.issues.listComments({
             owner,
             repo,
@@ -143,7 +143,7 @@ export const getIssues = async (
           const bodies: string[] = [issueBody!]
             .concat(data.map(({body}) => body!))
             .filter(Boolean)
-          const comments = bodies.map(body => parseBody(body, i))
+          const comments = bodies.map(parseBody)
 
           return {
             title,
