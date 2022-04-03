@@ -8,6 +8,9 @@ inputs:
   repository:
     required: true
     description: 'The owner and repository name'
+  output:
+    required: false
+    description: 'Archive root path. Default is root of repo.'
 runs:
   using: 'node12'
   main: 'dist/index.js'
