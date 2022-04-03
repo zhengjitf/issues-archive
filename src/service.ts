@@ -1,3 +1,4 @@
+import pathUtils from 'path'
 import * as github from '@actions/github'
 import parseLink from 'parse-link-header'
 import {parseBody, tryCatch} from './utils'
@@ -201,7 +202,20 @@ export const getTree = async (token: string, owner: string, repo: string) => {
   }
 }
 
-export const persist = async (token: string, owner: string, repo: string) => {
+export interface ArchiveOptions {
+  token: string
+  owner: string
+  repo: string
+  output: string
+}
+export const archive = async ({token, owner, repo, output}: ArchiveOptions) => {
+  const relativePath = (resolvedPath: string) => {
+    return pathUtils.relative(output, pathUtils.resolve('/', resolvedPath))
+  }
+  const resolvePath = (relativedPath: string) => {
+    return pathUtils.relative('/', pathUtils.join(output, relativedPath))
+  }
+
   const gitService = new GitService({
     token,
     owner,
@@ -213,8 +227,6 @@ export const persist = async (token: string, owner: string, repo: string) => {
   const removeds: Tree['tree'] = []
   const updates: Tree['tree'] = []
   const creates: Tree['tree'] = []
-
-  const issues = await getIssues(token, owner, repo)
 
   // 1. get a reference
   const [err] = await tryCatch(gitService.getRef())
@@ -232,34 +244,40 @@ export const persist = async (token: string, owner: string, repo: string) => {
   commit_sha = treeData.commit_sha
   const {tree} = treeData
 
-  const treeMap = tree.reduce((map, item) => {
-    // 忽略 .开头的目录
-    if (item.path![0] === '.') {
+  const treeMap = tree
+    .filter(item => ({
+      ...item,
+      path: relativePath(item.path!)
+    }))
+    .reduce((map, item) => {
+      // 忽略 .开头的目录
+      if (item.path![0] === '.') {
+        return map
+      }
+
+      if (item.type === 'tree') {
+        // 文件夹
+        map[item.path!] = {
+          sha: item.sha!,
+          files: []
+        }
+      } else if (item.type === 'blob') {
+        // 文件
+        const [dir, filename] = item.path?.split('/') || []
+        // TIPS: 忽略根路径下的文件及非 .md 后缀的文件
+        if (filename && filename.match(/^(.+)\.md$/)) {
+          map[dir].files.push({
+            name: filename.match(/^(.+)\.md$/)![1],
+            sha: item.sha!
+          })
+        }
+      }
+
       return map
-    }
-
-    if (item.type === 'tree') {
-      // 文件夹
-      map[item.path!] = {
-        sha: item.sha!,
-        files: []
-      }
-    } else if (item.type === 'blob') {
-      // 文件
-      const [dir, filename] = item.path?.split('/') || []
-      // TIPS: 忽略根路径下的文件及非 .md 后缀的文件
-      if (filename && filename.match(/^(.+)\.md$/)) {
-        map[dir].files.push({
-          name: filename.match(/^(.+)\.md$/)![1],
-          sha: item.sha!
-        })
-      }
-    }
-
-    return map
-  }, {} as TreeMap)
+    }, {} as TreeMap)
 
   // 3. 要存储的 issues
+  const issues = await getIssues(token, owner, repo)
   const issuesMap = issues.reduce((map, item) => {
     map[item.title] = item.comments
     return map
@@ -273,7 +291,7 @@ export const persist = async (token: string, owner: string, repo: string) => {
       // TIPS: 删除目录下的所有文件，文件夹会被一起删除
       for (const {name} of files) {
         removeds.push({
-          path: `${dir}/${name}.md`,
+          path: resolvePath(`${dir}/${name}.md`),
           mode: '100644',
           sha: null,
           type: 'blob'
@@ -296,7 +314,7 @@ export const persist = async (token: string, owner: string, repo: string) => {
       // 要删除的文件
       if (!comment) {
         removeds.push({
-          path: `${dir}/${file.name}.md`,
+          path: resolvePath(`${dir}/${file.name}.md`),
           mode: '100644',
           sha: null,
           type: 'blob'
@@ -311,7 +329,7 @@ export const persist = async (token: string, owner: string, repo: string) => {
       // 要更新的文件
       if (blob.sha !== file.sha) {
         updates.push({
-          path: `${dir}/${file.name}.md`,
+          path: resolvePath(`${dir}/${file.name}.md`),
           mode: '100644',
           sha: blob.sha,
           type: 'blob'
@@ -324,7 +342,7 @@ export const persist = async (token: string, owner: string, repo: string) => {
       const {data: blob} = await gitService.createBlob(content)
 
       creates.push({
-        path: `${dir}/${title}.md`,
+        path: resolvePath(`${dir}/${title}.md`),
         mode: '100644',
         sha: blob.sha,
         type: 'blob'
@@ -338,7 +356,7 @@ export const persist = async (token: string, owner: string, repo: string) => {
     for (const {title, content} of comments) {
       const {data: blob} = await gitService.createBlob(content)
       creates.push({
-        path: `${issueTitle}/${title}.md`,
+        path: resolvePath(`${issueTitle}/${title}.md`),
         mode: '100644',
         sha: blob.sha,
         type: 'blob'
