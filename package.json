@@ -13,7 +13,7 @@
     "test": "jest",
     "all": "pnpm run build && pnpm run format && pnpm run lint && pnpm run package",
     "debug": "node --inspect-brk -r ts-node/register src/main.ts",
-    "dev": "ts-node src/main.ts"
+    "dev": "npx @dotenvx/dotenvx run -- ts-node src/test.ts"
   },
   "repository": {
     "type": "git",

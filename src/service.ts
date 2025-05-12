@@ -107,17 +107,21 @@ export const getIssues = async (
   const octokit = github.getOctokit(token)
 
   // 获取 issues 条数
-  const {
-    headers: {link},
-    data: {length}
-  } = await octokit.rest.issues.listForRepo({
-    owner,
-    repo,
-    per_page: 1
-  })
-  const total = (() => {
-    if (link) {
-      return +parseLink(link)!.last!.page || 0
+  
+  const total = await (async function getTotal(page = 1): Promise<number> {
+    const {
+      headers: { link },
+      data: { length }
+    } = await octokit.rest.issues.listForRepo({
+      owner,
+      repo,
+      per_page: 100,
+      page,
+    })
+
+    const nextPage = parseLink(link)?.next?.page
+    if (length === 100 && !!nextPage && +nextPage === page + 1) {
+      return length + await getTotal(+nextPage)
     }
 
     return length
